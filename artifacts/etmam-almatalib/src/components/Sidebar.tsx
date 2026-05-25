@@ -1,7 +1,8 @@
 import { books } from "@/data/books";
 import { useBookmarks } from "@/hooks/useBookmarks";
+import { useProgress } from "@/hooks/useProgress";
 import { ChevronDown, ChevronLeft, Bookmark, BookOpen, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   currentBookId: string;
@@ -14,168 +15,138 @@ interface Props {
 
 export default function Sidebar({ currentBookId, currentBabId, currentFaslId, onNavigate, onClose, isMobile }: Props) {
   const { bookmarks } = useBookmarks();
+  const { getBookProgress } = useProgress();
   const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set([currentBookId]));
   const [expandedBabs, setExpandedBabs] = useState<Set<string>>(new Set([currentBabId || ""]));
 
-  const toggleBook = (id: string) => {
-    setExpandedBooks(prev => {
-      const s = new Set(prev);
-      if (s.has(id)) s.delete(id); else s.add(id);
-      return s;
-    });
-  };
+  // Auto-expand current book when it changes
+  useEffect(() => {
+    setExpandedBooks(prev => new Set([...prev, currentBookId]));
+    if (currentBabId) setExpandedBabs(prev => new Set([...prev, currentBabId]));
+  }, [currentBookId, currentBabId]);
 
-  const toggleBab = (id: string) => {
-    setExpandedBabs(prev => {
-      const s = new Set(prev);
-      if (s.has(id)) s.delete(id); else s.add(id);
-      return s;
-    });
-  };
+  const toggleBook = (id: string) => setExpandedBooks(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const toggleBab = (id: string) => setExpandedBabs(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
-  const isCurrentSection = (bookId: string, babId?: string, faslId?: string) =>
+  const isCurrent = (bookId: string, babId?: string, faslId?: string) =>
     bookId === currentBookId && babId === currentBabId && faslId === currentFaslId;
 
   return (
-    <div style={{
-      width: isMobile ? "100%" : 280,
-      background: "var(--sidebar-bg)",
-      borderLeft: "1px solid var(--border)",
-      display: "flex",
-      flexDirection: "column",
-      height: "100%",
-      overflow: "hidden",
-    }}>
-      {/* Sidebar header */}
-      <div style={{
-        padding: "14px 16px",
-        borderBottom: "1px solid var(--border)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "var(--bg-card)",
-      }}>
+    <div style={{ width: isMobile ? "100%" : 290, background: "var(--sidebar-bg)", display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg-card)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <BookOpen size={16} style={{ color: "var(--accent)" }} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--accent)" }}>فهرس الكتاب</span>
+          <BookOpen size={15} style={{ color: "var(--accent)" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>فهرس الكتاب</span>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {bookmarks.length > 0 && (
-            <span style={{ fontSize: 11, background: "var(--accent)", color: "#fff", borderRadius: 20, padding: "2px 8px" }}>
-              {bookmarks.length} علامة
-            </span>
+            <span style={{ fontSize: 10, background: "var(--accent)", color: "#fff", borderRadius: 20, padding: "2px 7px" }}>{bookmarks.length} علامة</span>
           )}
           {isMobile && onClose && (
-            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex" }}>
-              <X size={18} />
+            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", padding: 4 }}>
+              <X size={16} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Bookmarks section */}
+      {/* Bookmarks quick access */}
       {bookmarks.length > 0 && (
-        <div style={{ borderBottom: "1px solid var(--border)" }}>
-          <div style={{ padding: "10px 16px 4px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            العلامات المرجعية
-          </div>
+        <div style={{ borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ padding: "8px 14px 2px", fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>العلامات</div>
           {bookmarks.slice(0, 3).map(bm => (
             <button
               key={bm.id}
-              onClick={() => { onNavigate(bm.bookId, bm.babId, bm.faslId); if (onClose) onClose(); }}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 16px",
-                background: "none", border: "none", cursor: "pointer", textAlign: "right", fontFamily: "inherit",
-              }}
+              onClick={() => { onNavigate(bm.bookId, bm.babId, bm.faslId); onClose?.(); }}
+              style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "6px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "right", fontFamily: "inherit" }}
               onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-secondary)")}
               onMouseLeave={e => (e.currentTarget.style.background = "none")}
             >
-              <Bookmark size={12} style={{ color: "var(--accent-light)", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {bm.title}
-              </span>
+              <Bookmark size={11} style={{ color: "var(--accent-light)", flexShrink: 0 }} fill="var(--accent-light)" />
+              <span style={{ fontSize: 11, color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bm.title}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Books tree */}
+      {/* Tree */}
       <div style={{ overflow: "auto", flex: 1, paddingBottom: 16 }}>
         {books.map(book => {
           const isExpanded = expandedBooks.has(book.id);
-          const isActive = book.id === currentBookId;
+          const isBookActive = book.id === currentBookId;
+          const progress = getBookProgress(book.id);
 
           return (
             <div key={book.id}>
-              {/* Book heading */}
               <button
                 onClick={() => { toggleBook(book.id); onNavigate(book.id); if (isMobile && onClose && !book.abwab.length) onClose(); }}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  width: "100%", padding: "10px 16px", background: isActive && !currentBabId ? "var(--accent)" : "none",
-                  border: "none", cursor: "pointer", fontFamily: "inherit", color: isActive && !currentBabId ? "#fff" : "var(--text-primary)",
-                  borderBottom: "none",
+                  width: "100%", padding: "9px 14px",
+                  background: isBookActive && !currentBabId ? "var(--accent)" : "none",
+                  border: "none", cursor: "pointer", fontFamily: "inherit",
+                  color: isBookActive && !currentBabId ? "#fff" : "var(--text-primary)",
+                  borderBottom: "1px solid transparent",
+                  position: "relative",
                 }}
-                onMouseEnter={e => { if (!(isActive && !currentBabId)) (e.currentTarget.style.background = "var(--bg-secondary)"); }}
-                onMouseLeave={e => { if (!(isActive && !currentBabId)) (e.currentTarget.style.background = "none"); }}
+                onMouseEnter={e => { if (!(isBookActive && !currentBabId)) e.currentTarget.style.background = "var(--bg-secondary)"; }}
+                onMouseLeave={e => { if (!(isBookActive && !currentBabId)) e.currentTarget.style.background = "none"; }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, textAlign: "right", flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {book.title}
-                  </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>{book.title}</span>
                 </div>
-                {book.abwab.length > 0 && (
-                  isExpanded
-                    ? <ChevronDown size={14} style={{ flexShrink: 0 }} />
-                    : <ChevronLeft size={14} style={{ flexShrink: 0 }} />
+                <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                  {progress > 0 && (
+                    <span style={{ fontSize: 9, color: isBookActive && !currentBabId ? "rgba(255,255,255,0.8)" : "var(--accent-light)" }}>{progress}%</span>
+                  )}
+                  {book.abwab.length > 0 && (isExpanded ? <ChevronDown size={12} /> : <ChevronLeft size={12} />)}
+                </div>
+                {/* Progress bar */}
+                {progress > 0 && !(isBookActive && !currentBabId) && (
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "var(--bg-secondary)" }}>
+                    <div style={{ height: "100%", width: `${progress}%`, background: "var(--accent-light)" }} />
+                  </div>
                 )}
               </button>
 
-              {/* Abwab */}
               {isExpanded && book.abwab.map(bab => {
                 const isBabExpanded = expandedBabs.has(bab.id);
                 const isBabActive = bab.id === currentBabId;
 
                 return (
-                  <div key={bab.id} style={{ borderRight: "2px solid var(--accent-light)", marginRight: 16 }}>
+                  <div key={bab.id} style={{ borderRight: "2px solid var(--accent-light)", marginRight: 14 }}>
                     <button
                       onClick={() => { toggleBab(bab.id); onNavigate(book.id, bab.id); if (isMobile && onClose && !bab.fusul.length) onClose(); }}
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        width: "100%", padding: "8px 12px 8px 8px",
+                        width: "100%", padding: "7px 10px 7px 6px",
                         background: isBabActive && !currentFaslId ? "var(--accent-bg)" : "none",
                         border: "none", cursor: "pointer", fontFamily: "inherit",
                         color: isBabActive && !currentFaslId ? "var(--accent)" : "var(--text-secondary)",
                         borderRight: isBabActive && !currentFaslId ? "3px solid var(--accent)" : "3px solid transparent",
                       }}
-                      onMouseEnter={e => { if (!(isBabActive && !currentFaslId)) (e.currentTarget.style.background = "var(--bg-secondary)"); }}
-                      onMouseLeave={e => { if (!(isBabActive && !currentFaslId)) (e.currentTarget.style.background = "none"); }}
+                      onMouseEnter={e => { if (!(isBabActive && !currentFaslId)) e.currentTarget.style.background = "var(--bg-secondary)"; }}
+                      onMouseLeave={e => { if (!(isBabActive && !currentFaslId)) e.currentTarget.style.background = "none"; }}
                     >
-                      <span style={{ fontSize: 12, fontWeight: 600, textAlign: "right", lineHeight: 1.4 }}>
-                        {bab.title}
-                      </span>
-                      {bab.fusul.length > 0 && (
-                        isBabExpanded
-                          ? <ChevronDown size={12} style={{ flexShrink: 0 }} />
-                          : <ChevronLeft size={12} style={{ flexShrink: 0 }} />
-                      )}
+                      <span style={{ fontSize: 11, fontWeight: 600, textAlign: "right", lineHeight: 1.4, flex: 1 }}>{bab.title}</span>
+                      {bab.fusul.length > 0 && (isBabExpanded ? <ChevronDown size={11} /> : <ChevronLeft size={11} />)}
                     </button>
 
-                    {/* Fusul */}
                     {isBabExpanded && bab.fusul.map((fasl, fi) => (
                       <button
                         key={fasl.id}
                         onClick={() => { onNavigate(book.id, bab.id, fasl.id); if (isMobile && onClose) onClose(); }}
                         style={{
-                          display: "block", width: "100%", padding: "6px 8px 6px 4px", paddingRight: 20,
-                          background: isCurrentSection(book.id, bab.id, fasl.id) ? "var(--accent-bg)" : "none",
+                          display: "block", width: "100%", padding: "5px 6px 5px 4px", paddingRight: 18,
+                          background: isCurrent(book.id, bab.id, fasl.id) ? "var(--accent-bg)" : "none",
                           border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "right",
-                          color: isCurrentSection(book.id, bab.id, fasl.id) ? "var(--accent)" : "var(--text-muted)",
-                          borderRight: isCurrentSection(book.id, bab.id, fasl.id) ? "3px solid var(--accent-light)" : "3px solid transparent",
+                          color: isCurrent(book.id, bab.id, fasl.id) ? "var(--accent)" : "var(--text-muted)",
+                          borderRight: isCurrent(book.id, bab.id, fasl.id) ? "3px solid var(--accent-light)" : "3px solid transparent",
                           fontSize: 11,
                         }}
-                        onMouseEnter={e => { if (!isCurrentSection(book.id, bab.id, fasl.id)) (e.currentTarget.style.background = "var(--bg-secondary)"); }}
-                        onMouseLeave={e => { if (!isCurrentSection(book.id, bab.id, fasl.id)) (e.currentTarget.style.background = "none"); }}
+                        onMouseEnter={e => { if (!isCurrent(book.id, bab.id, fasl.id)) e.currentTarget.style.background = "var(--bg-secondary)"; }}
+                        onMouseLeave={e => { if (!isCurrent(book.id, bab.id, fasl.id)) e.currentTarget.style.background = "none"; }}
                       >
                         {fasl.title === "فَصْلٌ" ? `فصل ${fi + 1}` : fasl.title}
                       </button>

@@ -1,5 +1,6 @@
 import rawData from "../bookData.json";
 import type { Book } from "../types";
+import { normalizeArabic } from "../utils/arabic";
 
 export const books: Book[] = rawData as Book[];
 
@@ -7,9 +8,9 @@ export function getBook(id: string): Book | undefined {
   return books.find(b => b.id === id);
 }
 
-export function searchBooks(query: string, maxResults = 50) {
+export function searchBooks(query: string, maxResults = 60) {
   if (!query.trim() || query.length < 2) return [];
-  const q = query.trim().toLowerCase();
+  const q = normalizeArabic(query.trim());
   const results: Array<{
     bookId: string;
     bookTitle: string;
@@ -23,14 +24,9 @@ export function searchBooks(query: string, maxResults = 50) {
   for (const book of books) {
     if (results.length >= maxResults) break;
 
-    // Search intro content
-    for (const line of (book.introContent || [])) {
-      if (line.toLowerCase().includes(q)) {
-        results.push({
-          bookId: book.id,
-          bookTitle: book.title,
-          text: line,
-        });
+    for (const line of book.introContent || []) {
+      if (normalizeArabic(line).includes(q)) {
+        results.push({ bookId: book.id, bookTitle: book.title, text: line });
         if (results.length >= maxResults) break;
       }
     }
@@ -39,14 +35,8 @@ export function searchBooks(query: string, maxResults = 50) {
       if (results.length >= maxResults) break;
 
       for (const line of bab.content) {
-        if (line.toLowerCase().includes(q)) {
-          results.push({
-            bookId: book.id,
-            bookTitle: book.title,
-            babId: bab.id,
-            babTitle: bab.title,
-            text: line,
-          });
+        if (normalizeArabic(line).includes(q)) {
+          results.push({ bookId: book.id, bookTitle: book.title, babId: bab.id, babTitle: bab.title, text: line });
           if (results.length >= maxResults) break;
         }
       }
@@ -54,16 +44,8 @@ export function searchBooks(query: string, maxResults = 50) {
       for (const fasl of bab.fusul) {
         if (results.length >= maxResults) break;
         for (const line of fasl.content) {
-          if (line.toLowerCase().includes(q)) {
-            results.push({
-              bookId: book.id,
-              bookTitle: book.title,
-              babId: bab.id,
-              babTitle: bab.title,
-              faslId: fasl.id,
-              faslTitle: fasl.title,
-              text: line,
-            });
+          if (normalizeArabic(line).includes(q)) {
+            results.push({ bookId: book.id, bookTitle: book.title, babId: bab.id, babTitle: bab.title, faslId: fasl.id, faslTitle: fasl.title, text: line });
             if (results.length >= maxResults) break;
           }
         }
@@ -72,4 +54,25 @@ export function searchBooks(query: string, maxResults = 50) {
   }
 
   return results;
+}
+
+export function getAdjacentBook(id: string, dir: 'prev' | 'next'): Book | undefined {
+  const idx = books.findIndex(b => b.id === id);
+  if (idx < 0) return undefined;
+  return dir === 'prev' ? books[idx - 1] : books[idx + 1];
+}
+
+export function getAllSections(bookId: string) {
+  const book = getBook(bookId);
+  if (!book) return [];
+  const sections: Array<{ bookId: string; babId?: string; faslId?: string; title: string }> = [
+    { bookId, title: book.title },
+  ];
+  for (const bab of book.abwab) {
+    sections.push({ bookId, babId: bab.id, title: bab.title });
+    for (const fasl of bab.fusul) {
+      sections.push({ bookId, babId: bab.id, faslId: fasl.id, title: fasl.title });
+    }
+  }
+  return sections;
 }
