@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "متن إتمام المطالب"
+version = "1.0.0"
+id = "artifacts/etmam-almatalib"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19199
+
+[services.development]
+run = "pnpm --filter @workspace/etmam-almatalib run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/etmam-almatalib", "run", "build" ]
+publicDir = "artifacts/etmam-almatalib/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19199"
+BASE_PATH = "/"
